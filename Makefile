@@ -7,7 +7,7 @@ CFLAGS := -std=c++11 -Wno-deprecated-enum-enum-conversion -O2
 SFML_LIBS := -lsfml-graphics -lsfml-window -lsfml-system -lsfml-audio
 
 # PortAudio libraries
-PORTAUDIO_LIBS := -lportaudio
+PORTAUDIO_LIBS := -lportaudio -lsndfile
 
 # WxWidget setup
 WX_LIBS := $(shell wx-config --libs)
