@@ -1,17 +1,17 @@
 #include <iostream>
+#include <vector>
 #include <portaudio.h>
-#include <sndfile.h>
+#include <fstream> // Include the ofstream header for file writing
 
-#define SAMPLE_RATE 44100
+#define SAMPLE_RATE 10000
 #define FRAMES_PER_BUFFER 1024
 #define NUM_CHANNELS 1
-#define OUTPUT_FILE "output.wav"
+#define RECORDING_DURATION_SECONDS 3
+#define OUTPUT_FILE "output.csv"
 
 int main() {
     PaStream *stream;
     PaError err;
-    SNDFILE *outfile;
-    SF_INFO sfinfo;
 
     // Initialize PortAudio
     err = Pa_Initialize();
@@ -51,32 +51,23 @@ int main() {
         return -1;
     }
 
-    // Open the output file for writing
-    sfinfo.samplerate = SAMPLE_RATE;
-    sfinfo.channels = NUM_CHANNELS;
-    sfinfo.format = SF_FORMAT_WAV | SF_FORMAT_FLOAT; // WAV file format with floating-point data
-
-    outfile = sf_open(OUTPUT_FILE, SFM_WRITE, &sfinfo);
-    if (!outfile) {
-        std::cerr << "Error opening output file: " << sf_strerror(nullptr) << std::endl;
-        Pa_Terminate();
-        return -1;
-    }
-
     // Start the audio stream
     err = Pa_StartStream(stream);
     if (err != paNoError) {
         std::cerr << "Error starting stream: " << Pa_GetErrorText(err) << std::endl;
         Pa_CloseStream(stream);
         Pa_Terminate();
-        sf_close(outfile);
         return -1;
     }
 
     std::cout << "Recording..." << std::endl;
 
-    // Record for 5 seconds
-    for (int i = 0; i < 5 * SAMPLE_RATE / FRAMES_PER_BUFFER; i++) {
+    // Create a vector to store the recorded audio data
+    std::vector<float> audioData;
+    audioData.reserve(SAMPLE_RATE * NUM_CHANNELS * RECORDING_DURATION_SECONDS);
+
+    // Record for the specified duration
+    for (int i = 0; i < RECORDING_DURATION_SECONDS * SAMPLE_RATE / FRAMES_PER_BUFFER; i++) {
         float buffer[FRAMES_PER_BUFFER];
         err = Pa_ReadStream(stream, buffer, FRAMES_PER_BUFFER);
         if (err != paNoError) {
@@ -84,8 +75,8 @@ int main() {
             break;
         }
 
-        // Write the recorded data to the output file
-        sf_write_float(outfile, buffer, FRAMES_PER_BUFFER);
+        // Append the recorded data to the vector
+        audioData.insert(audioData.end(), buffer, buffer + FRAMES_PER_BUFFER);
     }
 
     // Stop and close the audio stream
@@ -99,13 +90,29 @@ int main() {
         std::cerr << "Error closing stream: " << Pa_GetErrorText(err) << std::endl;
     }
 
-    // Close the output file
-    sf_close(outfile);
-
     // Terminate PortAudio
     Pa_Terminate();
 
-    std::cout << "Recording complete. Audio saved to " << OUTPUT_FILE << std::endl;
+    std::cout << "Recording complete." << std::endl;
+
+    // Use ofstream to save the audio data to a CSV file
+    std::ofstream outputFile(OUTPUT_FILE);
+    if (!outputFile.is_open()) {
+        std::cerr << "Error opening output file: " << OUTPUT_FILE << std::endl;
+        return -1;
+    }
+
+    // Write the audio data to the CSV file
+    for (size_t i = 0; i < audioData.size(); i++) {
+        outputFile << audioData[i];
+        if (i < audioData.size() - 1) {
+            outputFile << ",";
+        }
+    }
+
+    outputFile.close();
+
+    std::cout << "Audio saved to " << OUTPUT_FILE << std::endl;
 
     return 0;
 }
