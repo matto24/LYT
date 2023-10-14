@@ -3,6 +3,8 @@
 CC := g++
 CFLAGS := -std=c++11 -Wno-deprecated-enum-enum-conversion -O2
 
+LDFLAGS = -lfftw3
+
 # SFML libraries
 SFML_LIBS := -lsfml-graphics -lsfml-window -lsfml-system -lsfml-audio
 
@@ -10,8 +12,8 @@ SFML_LIBS := -lsfml-graphics -lsfml-window -lsfml-system -lsfml-audio
 PORTAUDIO_LIBS := -lportaudio -lsndfile
 
 # WxWidget setup
-WX_LIBS := $(shell wx-config --libs)
-WX_CFLAGS := $(shell wx-config --cxxflags)
+# WX_LIBS := $(shell wx-config --libs)
+# WX_CFLAGS := $(shell wx-config --cxxflags)
 
 SOURCES := $(wildcard *.cpp)
 OBJECTS := $(patsubst %.cpp,%.o,$(SOURCES))
@@ -33,6 +35,6 @@ clean:
 
 # Linking the executable from the object files
 $(EXECUTABLE): $(OBJECTS)
-	$(CC) $^ -o $@ $(SFML_LIBS) $(WX_LIBS) $(PORTAUDIO_LIBS)
+	$(CC) $^ -o $@ $(SFML_LIBS) $(WX_LIBS) $(PORTAUDIO_LIBS) $(LDFLAGS)
 	./$(EXECUTABLE)
 

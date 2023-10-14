@@ -2,12 +2,66 @@
 #include <vector>
 #include <portaudio.h>
 #include <fstream> // Include the ofstream header for file writing
+#include <fftw3.h>
+#include <cmath>
 
-#define SAMPLE_RATE 10000
+#define SAMPLE_RATE 44100
 #define FRAMES_PER_BUFFER 1024
 #define NUM_CHANNELS 1
-#define RECORDING_DURATION_SECONDS 3
+#define RECORDING_DURATION_SECONDS 1
 #define OUTPUT_FILE "output.csv"
+
+void FFT(const std::vector<float> &audioData)
+{
+    int N = audioData.size();
+    std::cout << "N = " << N << std::endl;
+
+    /// FFTW setup
+    double *in;     //En pointer til en double som senere vil blive til array reelle tal til vores FFT input
+    fftw_complex *out;  //En pointer et komplekst tal, som senere bliver et array til FFT output
+    fftw_plan p;
+
+    // En 'plan' i FFTW er en forudbestemt strategi for, hvordan man hurtigt kan beregne FFT. Det forbereder den mest effektive måde at transformere data på.
+
+    in = (double *)fftw_malloc(sizeof(double) * N); // Allokere et array af reelle tal af længden N til vores input
+    out = (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * (N / 2 + 1)); // Ligeledes bare til komplekse output tal
+    
+    // Kun N/2 + 1 tal fordi vi laver en real to complex FFTW (Fordi der kun reelle tal i lyd og det her er vidst hurtigere)
+    // Noget med at noget information er redundant (:)
+
+    // Kopiere vores data til input variablen. Så vi sikre på at FFTW biblioteket har det hele gemt rigtigt i memory
+    for (int i = 0; i < N; i++)
+    {
+        in[i] = audioData[i];
+    }
+
+    // Her oprettes først planen for vores FFT, derefter udføres den.
+    p = fftw_plan_dft_r2c_1d(N, in, out, FFTW_ESTIMATE); // BEMÆRK! r2c (real to complex). 
+    //FFTW_ESTIMATE betyder at den estimere den hurtigste plan i stedet for at prøve lidt forskelligt af (eller noget)
+    fftw_execute(p); //udfører planen
+
+    // Printer alle amplituder
+    double largest = 0.0;
+    int largestN = 0;
+
+    for (int i = 690; i < 1700; i++) //N/2
+    {
+        double amplitude = std::sqrt(out[i][0] * out[i][0] + out[i][1] * out[i][1]);
+        //std::cout << "N: " << i << " , Amplitude: " << amplitude << std::endl;
+        if(amplitude > 5000){
+            std::cout << i << " . " << amplitude << std::endl;
+            
+            //largest = amplitude;
+            //largestN = i;
+        }
+    }
+    std::cout << "største amplitude = " << largest << " ved N = " << largestN << std::endl;
+
+    // De-allokerer hukommelse fra pointers. 
+    fftw_destroy_plan(p);
+    fftw_free(in);
+    fftw_free(out);
+}
 
 int main() {
     PaStream *stream;
@@ -109,6 +163,8 @@ int main() {
             outputFile << ",";
         }
     }
+
+    FFT(audioData);
 
     outputFile.close();
 
